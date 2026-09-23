@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="白神山地のブナ原生林を歩ける3D散策ビュー。">
+<meta name="author" content="Claude (Anthropic)">
+<meta name="generator" content="Claude Opus 5.5">
+<title>白神の森を歩く</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --ink:#1b3123;        /* 深い森の墨 */
+    --beech:#2e5b39;      /* ブナの葉陰 */
+    --moss:#6d8c43;       /* 苔 */
+    --bark:#9a9c94;       /* ブナの樹皮 */
+    --paper:#f2f6ec;      /* 霧の白 */
+    --sun:#e2b52f;        /* 木漏れ日 */
+    --line:rgba(27,49,35,.16);
+    color-scheme: light;
+  }
+  html,body{height:100%;margin:0;overflow:hidden;background:#d6e2c5;}
+  body{font-family:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;}
+  #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none;}
+
+  /* ---------- 入口 ---------- */
+  #intro{position:fixed;inset:0;z-index:20;display:flex;overflow-y:auto;padding:24px 16px;
+    background:linear-gradient(180deg,rgba(242,246,236,.55) 0%,rgba(242,246,236,.88) 55%,rgba(242,246,236,.95) 100%);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);transition:opacity .9s ease;}
+  #intro.gone{opacity:0;pointer-events:none;}
+  .gate{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start;max-width:620px;width:100%;margin:auto;}
+  .tate{writing-mode:vertical-rl;-webkit-writing-mode:vertical-rl;font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+    font-weight:800;font-size:clamp(46px,9vw,78px);line-height:1.05;letter-spacing:.08em;color:var(--beech);margin:0;}
+  .tate small{display:block;font-size:.26em;font-weight:600;letter-spacing:.3em;color:var(--moss);margin-top:.6em;}
+  .body{padding-top:6px;display:grid;gap:18px;}
+  .lead{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-size:17px;line-height:1.95;margin:0;max-width:34em;}
+  .keys{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:13.5px;line-height:1.5;margin:0;}
+  .keys dt{white-space:nowrap;}
+  .keys dd{margin:0;color:#3b4f40;}
+  kbd{font-family:inherit;font-size:12px;font-weight:700;display:inline-block;min-width:1.7em;text-align:center;padding:1px 6px;margin-right:3px;
+    border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;background:#fff;color:var(--ink);}
+  .go{justify-self:start;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  #enter{font:inherit;font-size:16px;font-weight:700;letter-spacing:.12em;padding:13px 30px;border:0;border-radius:999px;cursor:pointer;
+    background:var(--beech);color:#f5f9ef;box-shadow:0 6px 18px rgba(46,91,57,.28);transition:transform .15s ease,background .2s;}
+  #enter:hover{background:#244a2e;transform:translateY(-1px);}
+  #enter:disabled{background:#8fa391;cursor:progress;box-shadow:none;}
+  #enterAuto{font:inherit;font-size:15px;font-weight:700;letter-spacing:.1em;padding:12px 24px;border-radius:999px;cursor:pointer;
+    background:rgba(255,255,255,.75);color:var(--beech);border:1.5px solid var(--beech);transition:background .2s;}
+  #enterAuto:hover{background:#fff;}
+  #enterAuto:disabled{color:#8fa391;border-color:#8fa391;cursor:progress;}
+  #enterAuto:focus-visible{outline:3px solid var(--sun);outline-offset:2px;}
+  #autoBtn[aria-pressed="true"]{background:var(--beech);color:#f4f8ee;border-color:transparent;font-weight:700;}
+  #place em{display:block;font-style:normal;font-family:"Zen Kaku Gothic New",sans-serif;font-size:12.5px;margin-top:5px;color:#fff5d2;letter-spacing:.06em;}
+  #enter:focus-visible,.seg button:focus-visible,.hud-btn:focus-visible{outline:3px solid var(--sun);outline-offset:2px;}
+  .note{font-size:12.5px;color:#56685a;}
+  @media (max-width:560px){ .gate{gap:16px;} .lead{font-size:15px;} .keys{font-size:12.5px;} }
+
+  /* ---------- HUD ---------- */
+  .hud{position:fixed;z-index:10;pointer-events:none;opacity:0;transition:opacity .8s ease .4s;}
+  body.walking .hud{opacity:1;}
+  .hud > *{pointer-events:auto;}
+  #place{top:calc(14px + env(safe-area-inset-top,0px));left:16px;pointer-events:none;
+    font-family:"Shippori Mincho B1","Hiragino Mincho ProN",serif;color:#fff;text-shadow:0 1px 8px rgba(20,40,25,.55);}
+  #place b{display:block;font-size:20px;letter-spacing:.14em;font-weight:800;}
+  #place span{font-family:"Zen Kaku Gothic New",sans-serif;font-size:12.5px;letter-spacing:.06em;font-variant-numeric:tabular-nums;}
+  #panel{left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .seg{display:flex;background:rgba(242,246,236,.86);border:1px solid var(--line);border-radius:999px;padding:3px;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+  .seg button{font:inherit;font-size:13px;font-weight:500;border:0;background:transparent;color:var(--ink);padding:6px 13px;border-radius:999px;cursor:pointer;}
+  .seg button[aria-pressed="true"]{background:var(--beech);color:#f4f8ee;font-weight:700;}
+  .hud-btn{font:inherit;font-size:13px;border:1px solid var(--line);background:rgba(242,246,236,.86);color:var(--ink);padding:6px 13px;border-radius:999px;cursor:pointer;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+  #hint{right:16px;top:calc(14px + env(safe-area-inset-top,0px));font-size:12px;color:#fff;text-shadow:0 1px 6px rgba(20,40,25,.6);text-align:right;pointer-events:none;}
+  #joy{position:fixed;z-index:11;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;border:2px solid rgba(255,255,255,.7);
+    background:rgba(242,246,236,.18);pointer-events:none;display:none;}
+  #joy i{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:rgba(255,255,255,.85);}
+  @media (hover:none){ #hint{display:none;} }
+  @media (prefers-reduced-motion:reduce){ #intro,.hud{transition:none;} }
+</style>
+
+</head>
+<body>
+<canvas id="c" tabindex="0" aria-label="白神山地のブナ林を歩く3Dの森"></canvas>
+
+<div id="intro">
+  <div class="gate">
+    <h1 class="tate">白神の森<small>ブナ原生林をゆく</small></h1>
+    <div class="body">
+      <p class="lead">灰白の幹が霧のなかに並び、沢の音が足もとから聞こえてくる。人の手が入らずに残ったブナの森を、遊歩道に沿って歩いてみてください。</p>
+      <dl class="keys">
+        <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>歩く（<kbd>↑</kbd><kbd>↓</kbd>で前後、<kbd>←</kbd><kbd>→</kbd>で向きを変える）</dd>
+        <dt>マウス</dt><dd>見回す。画面をクリックすると視点が固定され、<kbd>Esc</kbd>で解除</dd>
+        <dt><kbd>Shift</kbd></dt><dd>早歩き</dd>
+        <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt><dd>季節を切り替える（新緑・盛夏・紅葉）</dd>
+        <dt><kbd>G</kbd></dt><dd>自動で歩く。沢のほとりや巨木に寄り道しながら遊歩道をたどり、歩きながら見回せる</dd>
+        <dt>スマホ</dt><dd>画面の左半分で歩き、右半分をなぞって見回す</dd>
+      </dl>
+      <div class="go">
+        <button id="enter" type="button" disabled>森を育てています…</button>
+        <button id="enterAuto" type="button" disabled>おまかせで歩く</button>
+        <span class="note">沢・風・鳥の音が鳴ります</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hud" id="place"><b>白神の森</b><span id="readout">新緑 · 北 · 標高 — m</span><em id="autoState"></em></div>
+<div class="hud" id="hint">クリックで視点固定 / Esc で解除</div>
+<div class="hud" id="panel">
+  <div class="seg" role="group" aria-label="季節">
+    <button type="button" id="s0" data-season="0" aria-pressed="true">新緑</button>
+    <button type="button" id="s1" data-season="1" aria-pressed="false">盛夏</button>
+    <button type="button" id="s2" data-season="2" aria-pressed="false">紅葉</button>
+  </div>
+  <button type="button" class="hud-btn" id="autoBtn" aria-pressed="false">自動で歩く</button>
+  <button type="button" class="hud-btn" id="sound" aria-pressed="true">音 オン</button>
+</div>
+<div id="joy"><i></i></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ================= 乱数・ノイズ ================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hash2(x,y){let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;}
+function vnoise(x,y){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi),b=hash2(xi+1,yi),c=hash2(xi,yi+1),d=hash2(xi+1,yi+1);return (a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v)*2-1;}
+function fbm(x,y,o){let s=0,a=.5,f=1,n=0;for(let i=0;i<o;i++){s+=a*vnoise(x*f+i*17.3,y*f-i*9.1);n+=a;a*=.5;f*=2.03;}return s/n;}
+const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+/* ================= 地形 ================= */
+const HALF=200, WALK=172;
+const streamX=z=>18*Math.sin(z*.018)+7*Math.sin(z*.047+1.3);
+const trailX=z=>streamX(z)+11+3*Math.sin(z*.06+.5);
+const lowH=(x,z)=>9*fbm(x*.007,z*.007,4)-.045*z;
+const bedH=z=>lowH(streamX(z),z)-1.4;
+const waterY=z=>bedH(z)+.55;
+function height(x,z){
+  const d=Math.abs(x-streamX(z));
+  let h=lowH(x,z)+2.2*fbm(x*.03+50,z*.03,3)+.22*vnoise(x*.45,z*.45)+Math.min(d,70)*.085;
+  const bed=bedH(z);
+  return bed+(h-bed)*smooth(1.8,8,d);
+}
+
+/* ================= 自動歩行のルート =================
+   遊歩道を沢沿いに下り、沢のほとり2か所とブナの巨木に寄り道して立ち止まる。終点で折り返して入口へ戻り、以後くり返す */
+const BIG={x:trailX(32)+7.5,z:32};
+const route=[],clearPts=[];
+(function(){
+  const add=(x,z,o)=>route.push(Object.assign({x,z},o||{}));
+  const detour=pts=>{for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],n=Math.ceil(Math.hypot(b.x-a.x,b.z-a.z));
+    for(let k=0;k<=n;k++)clearPts.push({x:lerp(a.x,b.x,k/n),z:lerp(a.z,b.z,k/n)});}};
+  let z=-136;
+  while(z<=160){
+    add(trailX(z),z);
+    if(z===-50||z===96){
+      const vz=z+5,sx=streamX(vz),vp={x:sx+4.3,z:vz},p1={x:trailX(z),z},p3={x:trailX(z+10),z:z+10};
+      add(vp.x,vp.z,{pause:8,look:{x:sx,y:waterY(vz+6),z:vz+6},label:'沢のほとりで一息'});
+      add(p3.x,p3.z);detour([p1,vp,p3]);z+=12;continue;
+    }
+    if(z===24){
+      const vp={x:BIG.x-3.4,z:BIG.z-2.2},p1={x:trailX(24),z:24},p3={x:trailX(40),z:40};
+      add(vp.x,vp.z,{pause:9,look:{x:BIG.x,y:height(BIG.x,BIG.z)+12,z:BIG.z},label:'ブナの巨木を見上げる'});
+      add(p3.x,p3.z);detour([p1,vp,p3]);z=42;continue;
+    }
+    z+=2;
+  }
+  add(trailX(162),162,{pause:5,look:null,label:'ここで折り返す'});
+  for(let i=route.length-2;i>=0;i--){const p=route[i];if(!p.pause)add(p.x,p.z);}
+  Object.assign(route[route.length-1],{pause:5,look:null,label:'遊歩道の入口'});
+})();
+const nearRoute=(x,z,r)=>clearPts.some(p=>Math.abs(x-p.x)<r&&Math.abs(z-p.z)<r&&Math.hypot(x-p.x,z-p.z)<r);
+
+/* ================= レンダラ ================= */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0xd7e3c6,.013);
+scene.background=new THREE.Color(0xd7e3c6);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,430);
+camera.rotation.order='YXZ';
+
+const hemi=new THREE.HemisphereLight(0xe6f0d0,0x4a5634,1.2);scene.add(hemi);
+const sunDir=new THREE.Vector3(-.35,.85,.4).normalize();
+const sun=new THREE.DirectionalLight(0xfff1d0,2.6);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-55,right:55,top:55,bottom:-55,near:1,far:260});
+sun.shadow.bias=-.0006;sun.shadow.normalBias=.05;
+scene.add(sun,sun.target);
+
+const U={uTime:{value:0}};
+const glowLeaf={value:.28}, glowFloor={value:.08};
+
+/* ================= キャンバス・テクスチャ ================= */
+function canvasTex(w,h,draw,repeat){
+  const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');draw(g,w,h);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  if(repeat){t.wrapS=t.wrapT=THREE.RepeatWrapping;}
+  t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return t;
+}
+function wrapDraw(g,w,h,x,y,m,fn){for(const ox of [-w,0,w])for(const oy of [-h,0,h]){if(x+ox<-m||x+ox>w+m||y+oy<-m||y+oy>h+m)continue;fn(x+ox,y+oy);}}
+
+const barkTex=canvasTex(256,512,(g,w,h)=>{
+  g.fillStyle='#b3b6ac';g.fillRect(0,0,w,h);const r=mulberry32(7);
+  const cols=['214,216,204','176,186,160','118,126,108','234,234,224','150,162,118','196,200,186'];
+  for(let i=0;i<1600;i++){const x=r()*w,y=r()*h,rw=3+r()*24,rh=2+r()*12,rot=r()*.6-.3,c=cols[(r()*cols.length)|0],a=.12+r()*.34;
+    wrapDraw(g,w,h,x,y,30,(X,Y)=>{g.fillStyle=`rgba(${c},${a})`;g.beginPath();g.ellipse(X,Y,rw,rh,rot,0,Math.PI*2);g.fill();});}
+  for(let i=0;i<300;i++){const x=r()*w,y=r()*h,l=5+r()*14;g.fillStyle='rgba(78,82,74,.32)';g.fillRect(x,y,l,1.3);if(x+l>w)g.fillRect(x-w,y,l,1.3);}
+},true);
+
+const leafTex=canvasTex(256,256,(g)=>{
+  const r=mulberry32(11);
+  g.strokeStyle='rgba(90,80,60,.9)';g.lineWidth=1.6;
+  for(let i=0;i<5;i++){g.beginPath();g.moveTo(128,128);g.quadraticCurveTo(128+(r()-.5)*120,128+(r()-.5)*120,128+(r()-.5)*190,128+(r()-.5)*190);g.stroke();}
+  for(let i=0;i<24;i++){
+    const a=r()*Math.PI*2,d=Math.sqrt(r())*86,x=128+Math.cos(a)*d,y=128+Math.sin(a)*d;
+    const len=40+r()*26,wid=len*.44,rot=r()*Math.PI*2,l=76+r()*18;
+    g.save();g.translate(x,y);g.rotate(rot);g.beginPath();
+    const N=40;for(let k=0;k<=N;k++){const t=k/N*Math.PI*2;let px=Math.cos(t)*len/2,py=Math.sin(t)*wid/2;
+      py*=(1+.07*Math.sin(t*18))*(1-.3*Math.max(0,px/(len/2)));k?g.lineTo(px,py):g.moveTo(px,py);}
+    g.closePath();g.fillStyle=`hsl(84,28%,${l}%)`;g.fill();
+    g.strokeStyle='rgba(70,90,45,.38)';g.lineWidth=1.1;g.beginPath();g.moveTo(-len/2-5,0);g.lineTo(len/2,0);g.stroke();
+    g.lineWidth=.7;g.beginPath();for(let v=-4;v<=3;v++){const vx=v*len/10;g.moveTo(vx,0);g.lineTo(vx+len/9,wid*.42);g.moveTo(vx,0);g.lineTo(vx+len/9,-wid*.42);}g.stroke();
+    g.restore();
+  }
+});
+
+const sasaTex=canvasTex(256,256,(g)=>{
+  const r=mulberry32(23);
+  for(let i=0;i<28;i++){
+    const bx=128+(r()-.5)*70,tx=bx+(r()-.5)*90,ty=250-50-r()*120;
+    g.strokeStyle='rgba(120,140,70,.9)';g.lineWidth=1.6;g.beginPath();g.moveTo(bx,256);g.lineTo(tx,ty);g.stroke();
+    for(let k=0;k<2;k++){
+      const ang=-Math.PI/2+(r()-.5)*2.4,len=58+r()*40,wid=11+r()*7,l=70+r()*18;
+      g.save();g.translate(tx,ty);g.rotate(ang);g.beginPath();g.moveTo(0,0);
+      g.quadraticCurveTo(len*.35,-wid,len,0);g.quadraticCurveTo(len*.35,wid,0,0);
+      g.fillStyle=`hsl(96,30%,${l}%)`;g.fill();
+      g.strokeStyle='rgba(235,240,215,.55)';g.lineWidth=.8;g.stroke(); // 隈取りのような縁
+      g.strokeStyle='rgba(80,100,50,.35)';g.beginPath();g.moveTo(0,0);g.lineTo(len*.95,0);g.stroke();
+      g.restore();
+    }
+  }
+});
+
+const fernTex=canvasTex(256,256,(g)=>{
+  const r=mulberry32(31);
+  for(let f=0;f<6;f++){
+    const ang=-Math.PI/2+(f/5-.5)*2.2+(r()-.5)*.2,len=120+r()*80;
+    const P=t=>{const bend=t*t*.9*(ang< -Math.PI/2?-1:1);const a=ang+bend*.9;return[128+Math.cos(ang)*len*t+Math.cos(a)*6*t,254+Math.sin(ang)*len*t+t*t*len*.35];};
+    g.strokeStyle='rgba(110,130,60,.95)';g.lineWidth=1.8;g.beginPath();for(let k=0;k<=30;k++){const[x,y]=P(k/30);k?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();
+    for(let k=3;k<30;k++){const t=k/30,[x,y]=P(t),[x2,y2]=P(t+.02);const dx=x2-x,dy=y2-y,dl=Math.hypot(dx,dy)||1,nx=-dy/dl,ny=dx/dl,pl=(1-t)*26+4;
+      for(const s of[-1,1]){g.fillStyle=`hsl(100,34%,${70+r()*14}%)`;g.beginPath();g.ellipse(x+nx*s*pl/2+dx/dl*2,y+ny*s*pl/2+dy/dl*2,pl/2,2.6,Math.atan2(ny*s,nx*s)+.35*s,0,Math.PI*2);g.fill();}}
+  }
+});
+
+const groundTex=canvasTex(512,512,(g,w,h)=>{
+  g.fillStyle='#665538';g.fillRect(0,0,w,h);const r=mulberry32(5);
+  const cols=['#8a6a44','#a07d52','#735636','#5c4630','#9b8a60','#7d6a4a','#b09062','#6e5a3c'];
+  for(let i=0;i<3400;i++){const x=r()*w,y=r()*h,l=4+r()*9,rot=r()*Math.PI,c=cols[(r()*cols.length)|0];
+    wrapDraw(g,w,h,x,y,14,(X,Y)=>{g.fillStyle=c;g.globalAlpha=.85;g.beginPath();g.ellipse(X,Y,l,l*.45,rot,0,Math.PI*2);g.fill();});}
+  g.globalAlpha=.5;for(let i=0;i<1100;i++){const x=r()*w,y=r()*h,s=1+r()*3;g.fillStyle=r()<.5?'#6f8a3e':'#58722f';g.beginPath();g.arc(x,y,s,0,Math.PI*2);g.fill();}
+  g.globalAlpha=.7;g.strokeStyle='#3e3122';for(let i=0;i<120;i++){const x=r()*w,y=r()*h,a=r()*Math.PI,l=8+r()*24;g.lineWidth=1+r();g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);g.stroke();}
+  g.globalAlpha=1;
+},true);
+
+const dotTex=canvasTex(64,64,(g)=>{const gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.35,'rgba(255,255,255,.5)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);});
+
+/* ================= 共通ユーティリティ ================= */
+function mergeGeos(list){
+  let n=0;for(const g of list)n+=g.attributes.position.count;
+  const P=new Float32Array(n*3),N=new Float32Array(n*3),UV=new Float32Array(n*2),I=[];let o=0;
+  for(const g of list){const c=g.attributes.position.count;P.set(g.attributes.position.array,o*3);N.set(g.attributes.normal.array,o*3);UV.set(g.attributes.uv.array,o*2);
+    const ix=g.index.array;for(let i=0;i<ix.length;i++)I.push(ix[i]+o);o+=c;}
+  const m=new THREE.BufferGeometry();m.setAttribute('position',new THREE.BufferAttribute(P,3));m.setAttribute('normal',new THREE.BufferAttribute(N,3));
+  m.setAttribute('uv',new THREE.BufferAttribute(UV,2));m.setIndex(I);return m;
+}
+// 葉・下草のシェーダー改造：風で揺らし、裏面の法線反転を止め、透過光っぽく発光させる
+function patchFoliage(mat,sway,glowU,byHeight){
+  mat.onBeforeCompile=sh=>{
+    sh.uniforms.uTime=U.uTime;sh.uniforms.uGlow=glowU;sh.uniforms.uSway={value:sway};
+    sh.vertexShader='uniform float uTime;\nuniform float uSway;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        vec3 ip=instanceMatrix[3].xyz;
+      #else
+        vec3 ip=vec3(0.0);
+      #endif
+      float ph=ip.x*.21+ip.z*.17;
+      float sw=sin(uTime*1.1+ph)*.6+sin(uTime*2.3+ph*1.7)*.3+sin(uTime*5.3+ph*3.1)*.1;
+      float hf=${byHeight?'clamp(position.y,0.0,1.6)':'1.0'};
+      transformed.x+=sw*uSway*hf; transformed.z+=sw*uSway*.6*hf;`);
+    sh.fragmentShader='uniform float uGlow;\n'+sh.fragmentShader
+      .replace('#include <normal_fragment_begin>',THREE.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;',''))
+      .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb*uGlow;');
+  };
+}
+function crossQuads(n,w,h,upNormals,tilt,seed){
+  const r=mulberry32(seed||1),list=[];
+  for(let k=0;k<n;k++){const p=new THREE.PlaneGeometry(w,h,1,2);p.translate(0,h/2,0);if(tilt)p.rotateX((r()-.5)*tilt);p.rotateY(k/n*Math.PI+(r()-.5)*.3);list.push(p);}
+  const g=mergeGeos(list);
+  if(upNormals){const nn=g.attributes.normal;for(let i=0;i<nn.count;i++)nn.setXYZ(i,0,1,0);}
+  return g;
+}
+
+/* ================= 地面 ================= */
+const TG=new THREE.PlaneGeometry(HALF*2,HALF*2,256,256);TG.rotateX(-Math.PI/2);
+{
+  const p=TG.attributes.position,col=new Float32Array(p.count*3);
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),z=p.getZ(i);p.setY(i,height(x,z));
+    const d=Math.abs(x-streamX(z)),dt=Math.abs(x-trailX(z));
+    const moss=smooth(-.15,.5,fbm(x*.05+3,z*.05,3))*.75;
+    let c=[lerp(.9,.6,moss),lerp(.87,.82,moss),lerp(.8,.44,moss)];
+    const bank=1-smooth(2.2,5.5,d);c=c.map((v,j)=>lerp(v,[.52,.58,.5][j],bank));
+    const tr=1-smooth(.9,1.9,dt);c=c.map((v,j)=>lerp(v,[1.22,1.06,.86][j],tr*.85));
+    col.set(c,i*3);
+  }
+  TG.setAttribute('color',new THREE.BufferAttribute(col,3));TG.computeVertexNormals();
+}
+groundTex.repeat.set(100,100);
+const ground=new THREE.Mesh(TG,new THREE.MeshLambertMaterial({map:groundTex,vertexColors:true}));
+ground.receiveShadow=true;scene.add(ground);
+
+/* ================= 沢 ================= */
+{
+  const P=[],UV=[],I=[];let row=0;
+  for(let z=-HALF;z<=HALF;z+=1){const xs=streamX(z),y=waterY(z);
+    P.push(xs-6.5,y,z, xs+6.5,y,z);UV.push(0,z*.35,1,z*.35);
+    if(row){const a=(row-1)*2;I.push(a,a+2,a+1,a+1,a+2,a+3);}row++;}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));g.setIndex(I);
+  const mat=new THREE.ShaderMaterial({
+    transparent:true,fog:true,side:THREE.DoubleSide,
+    uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{uTime:{value:0},uDeep:{value:new THREE.Color(0x1d372f)},uShallow:{value:new THREE.Color(0x5b7f6c)}}]),
+    vertexShader:`varying vec2 vUv; varying vec3 vW;
+      #include <fog_pars_vertex>
+      void main(){ vUv=uv; vec4 wp=modelMatrix*vec4(position,1.0); vW=wp.xyz; vec4 mvPosition=viewMatrix*wp; gl_Position=projectionMatrix*mvPosition;
+      #include <fog_vertex>
+      }`,
+    fragmentShader:`uniform float uTime; uniform vec3 uDeep; uniform vec3 uShallow; varying vec2 vUv; varying vec3 vW;
+      #include <fog_pars_fragment>
+      float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+      void main(){
+        vec2 p=vec2(vW.x*1.4,vUv.y*3.0-uTime*2.2);
+        float r=n(p)*.6+n(p*2.1+vec2(3.,-uTime*1.3))*.4;
+        vec3 col=mix(uDeep,uShallow,.25+.5*r);
+        float s=pow(n(p*vec2(3.,1.6)+vec2(0.,-uTime*1.7)),14.)*2.4;
+        col+=vec3(.95,1.,.94)*s;
+        float fres=pow(1.0-abs(normalize(cameraPosition-vW).y),4.0);
+        col=mix(col,fogColor*.92,fres*.55);
+        gl_FragColor=vec4(col,.72+fres*.2);
+        #include <colorspace_fragment>
+        #include <fog_fragment>
+      }`
+  });
+  const water=new THREE.Mesh(g,mat);water.renderOrder=1;scene.add(water);
+  U.water=mat.uniforms.uTime;
+}
+
+/* ================= ブナ ================= */
+const _T=new THREE.Vector3(),_N=new THREE.Vector3(),_B=new THREE.Vector3(),_D=new THREE.Vector3(),_tmp=new THREE.Vector3();
+function addTube(acc,pts,rad,seg){
+  const base=acc.p.length/3;let prevN=null,v=0;
+  for(let i=0;i<pts.length;i++){
+    const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];_T.subVectors(b,a).normalize();
+    if(!prevN){_tmp.set(0,1,0);if(Math.abs(_T.y)>.9)_tmp.set(1,0,0);_N.crossVectors(_T,_tmp).normalize();prevN=_N.clone();}
+    else{_N.copy(prevN).addScaledVector(_T,-prevN.dot(_T)).normalize();prevN.copy(_N);}
+    _B.crossVectors(_T,_N);if(i)v+=pts[i].distanceTo(pts[i-1]);
+    const r=rad[i],P=pts[i],rep=Math.max(1,Math.round(r*2*Math.PI/1.1));
+    for(let j=0;j<=seg;j++){const ang=j/seg*Math.PI*2;_D.copy(_N).multiplyScalar(Math.cos(ang)).addScaledVector(_B,Math.sin(ang));
+      const y=P.y+_D.y*r;acc.p.push(P.x+_D.x*r,y,P.z+_D.z*r);acc.n.push(_D.x,_D.y,_D.z);acc.u.push(j/seg*rep,v/1.6);
+      const m=(1-smooth(-.2,1.9,y))*.9+Math.max(0,_D.y)*.25*smooth(3,8,y);
+      acc.c.push(lerp(1,.5,m),lerp(1,.66,m),lerp(1,.38,m));}
+  }
+  for(let i=0;i<pts.length-1;i++)for(let j=0;j<seg;j++){const a=base+i*(seg+1)+j,b=a+seg+1;acc.i.push(a,a+1,b,a+1,b+1,b);}
+}
+const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+function buildBeech(r){
+  const acc={p:[],n:[],u:[],c:[],i:[]},leaves=[];
+  const H=17+r()*6,r0=.52+r()*.22,lx=(r()-.5)*1.2,lz=(r()-.5)*1.2,ph=r()*6;
+  const at=t=>V(lx*t*t+Math.sin(t*5+ph)*.18*t,t*H,lz*t*t+Math.cos(t*4+ph)*.18*t);
+  const R=t=>Math.max(.05,r0*(1-.8*t)*(1+.55*Math.exp(-Math.max(0,t)*22)));
+  const tp=[at(-.03)],tr=[R(0)];for(let i=0;i<12;i++){const t=i/11*.9;tp.push(at(t));tr.push(R(t));}
+  addTube(acc,tp,tr,12);
+  for(let k=0;k<5;k++){const az=k/5*Math.PI*2+r()*.5,c=Math.cos(az),s=Math.sin(az),e=r0*1.25;
+    addTube(acc,[V(c*.1,1.1,s*.1),V(c*e,.35,s*e),V(c*(e+.9),-.05,s*(e+.9)),V(c*(e+1.8),-.4,s*(e+1.8))],[r0*.42,r0*.38,r0*.2,.05],6);}
+  const nb=6+(r()*3|0);
+  for(let b=0;b<nb;b++){
+    const t=.42+.44*(b/(nb-1))+(r()-.5)*.04,P0=at(t),az=b*2.39996+r()*.7,el=.62+r()*.38-.25*(t-.4);
+    const dir=V(Math.cos(az)*Math.cos(el),Math.sin(el),Math.sin(az)*Math.cos(el)),out=V(Math.cos(az),0,Math.sin(az));
+    const L=H*(.40-.22*(t-.4))*(.85+r()*.3),rb=R(t)*.62,bp=[],br=[];
+    for(let k=0;k<5;k++){const s=k/4;bp.push(P0.clone().addScaledVector(dir,L*s).addScaledVector(out,s*s*L*.22));br.push(Math.max(.03,rb*(1-.85*s)));}
+    addTube(acc,bp,br,6);
+    const ptAt=s=>{const f=s*4,i=Math.min(3,Math.floor(f));return bp[i].clone().lerp(bp[i+1],f-i);};
+    for(let q=0;q<3;q++){
+      const s=.35+q*.22+r()*.08,Q=ptAt(s),az2=az+(r()<.5?-1:1)*(.6+r()*.6),el2=.25+r()*.5;
+      const d2=V(Math.cos(az2)*Math.cos(el2),Math.sin(el2),Math.sin(az2)*Math.cos(el2)),L2=L*(.36+r()*.15);
+      const sp=[Q,Q.clone().addScaledVector(d2,L2*.5),Q.clone().addScaledVector(d2,L2).add(V(0,-.3,0))];
+      addTube(acc,sp,[Math.max(.025,rb*(1-.85*s)*.6),.04,.02],4);
+      leaves.push({p:sp[2],s:1});
+    }
+    leaves.push({p:bp[4],s:1.15});leaves.push({p:ptAt(.7).add(V(0,.7,0)),s:1});leaves.push({p:ptAt(.5).add(V(0,1.1,0)),s:.9});
+  }
+  const top=at(.9);for(let k=0;k<4;k++)leaves.push({p:top.clone().add(V((r()-.5)*3,r()*1.5,(r()-.5)*3)),s:1.1});
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(acc.p,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(acc.n,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(acc.u,2));g.setAttribute('color',new THREE.Float32BufferAttribute(acc.c,3));g.setIndex(acc.i);
+  g.computeBoundingSphere();
+  return {geo:g,leaves,r0};
+}
+// 葉の房：水平寄りの面を中心に数枚の板を重ね、法線は房の中心から外向き
+function leafClusterGeo(){
+  const r=mulberry32(77),list=[];
+  for(let k=0;k<4;k++){const p=new THREE.PlaneGeometry(1,1);
+    if(k<2)p.rotateX(-Math.PI/2+(r()-.5)*.9);else p.rotateX((r()-.5)*.8);
+    p.rotateY(r()*Math.PI);p.translate((r()-.5)*.2,(r()-.5)*.2,(r()-.5)*.2);list.push(p);}
+  const g=mergeGeos(list),pos=g.attributes.position,nn=g.attributes.normal;
+  for(let i=0;i<pos.count;i++){_tmp.set(pos.getX(i),pos.getY(i)+.35,pos.getZ(i)).normalize();nn.setXYZ(i,_tmp.x,_tmp.y,_tmp.z);}
+  return g;
+}
+
+/* ================= 季節 ================= */
+const SEASONS=[
+  {name:'新緑',fog:0xd7e3c6,dens:.013,sun:0xfff3d6,sunI:2.6,sky:0xe6f0d0,gnd:0x4d5a36,glow:.28,
+    leaf:(t,c)=>c.setHSL(.235+t[0]*.04,.62,.50+t[1]*.1)},
+  {name:'盛夏',fog:0xc4d1b6,dens:.016,sun:0xfff6e0,sunI:2.9,sky:0xd6e4c4,gnd:0x3e4a2c,glow:.17,
+    leaf:(t,c)=>c.setHSL(.285+t[0]*.03,.52,.28+t[1]*.07)},
+  {name:'紅葉',fog:0xe3d9c2,dens:.012,sun:0xffe0b0,sunI:2.4,sky:0xefe2c8,gnd:0x5a4a30,glow:.26,
+    leaf:(t,c)=>{const q=t[2];if(q<.46)c.setHSL(.125+t[0]*.02,.86,.52+t[1]*.08);else if(q<.76)c.setHSL(.075+t[0]*.02,.82,.47+t[1]*.07);
+      else if(q<.9)c.setHSL(.05,.6,.33+t[1]*.06);else c.setHSL(.2,.6,.45);}},
+];
+
+/* ================= 世界の組み立て ================= */
+const trees=[],grid=new Map();
+const cellKey=(x,z)=>((Math.floor(x/8)+100)*1000+(Math.floor(z/8)+100));
+let leafMesh,leafRand,sasaMesh,fernMesh,shafts=[],dust,readyFlag=false;
+
+async function buildWorld(){
+  const r=mulberry32(20260923);
+  const variants=[];for(let v=0;v<8;v++)variants.push(buildBeech(mulberry32(100+v*31)));
+  const big=BIG;
+  const startSign={x:trailX(-128)+2.1,z:-128};
+  for(let gx=-192;gx<=192;gx+=8.5)for(let gz=-192;gz<=192;gz+=8.5){
+    const x=gx+(r()-.5)*7,z=gz+(r()-.5)*7;
+    const d=Math.abs(x-streamX(z)),dt=Math.abs(x-trailX(z));
+    if(d<5||dt<2.8)continue;
+    if(Math.hypot(x-big.x,z-big.z)<8||Math.hypot(x-startSign.x,z-startSign.z)<3||nearRoute(x,z,3.2))continue;
+    const dens=.45+.35*fbm(x*.02+9,z*.02,2);if(r()>dens+.18)continue;
+    const young=r()<.15,s=young?.3+r()*.25:.8+r()*.5;
+    trees.push({x,z,s,rot:r()*Math.PI*2,v:(r()*8)|0});
+  }
+  trees.push({x:big.x,z:big.z,s:1.6,rot:1.2,v:3,big:true});
+
+  const barkMat=new THREE.MeshLambertMaterial({map:barkTex,vertexColors:true});
+  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),pv=new THREE.Vector3(),sv=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
+  const byV=variants.map(()=>[]);
+  for(const t of trees){t.y=height(t.x,t.z)-.15;byV[t.v].push(t);t.rad=variants[t.v].r0*t.s*1.1+.32;
+    const k=cellKey(t.x,t.z);if(!grid.has(k))grid.set(k,[]);grid.get(k).push(t);}
+  let leafCount=0;
+  variants.forEach((V,vi)=>{
+    const list=byV[vi];if(!list.length)return;
+    const im=new THREE.InstancedMesh(V.geo,barkMat,list.length);
+    list.forEach((t,i)=>{q.setFromAxisAngle(up,t.rot);m4.compose(pv.set(t.x,t.y,t.z),q,sv.setScalar(t.s));im.setMatrixAt(i,m4);leafCount+=V.leaves.length;});
+    im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;scene.add(im);
+  });
+
+  const leafMat=new THREE.MeshLambertMaterial({map:leafTex,alphaTest:.42,side:THREE.DoubleSide,alphaToCoverage:true});
+  patchFoliage(leafMat,.1,glowLeaf,false);
+  leafMesh=new THREE.InstancedMesh(leafClusterGeo(),leafMat,leafCount);
+  leafRand=new Float32Array(leafCount*3);
+  const tm=new THREE.Matrix4(),lm=new THREE.Matrix4();let li=0;
+  for(const t of trees){
+    const Vt=variants[t.v];q.setFromAxisAngle(up,t.rot);tm.compose(pv.set(t.x,t.y,t.z),q,sv.setScalar(t.s));
+    const tr=[r(),r(),r()];
+    for(const L of Vt.leaves){
+      e.set((r()-.5)*.6,r()*Math.PI*2,(r()-.5)*.6);q.setFromEuler(e);
+      lm.compose(pv.copy(L.p).add(_tmp.set((r()-.5)*.8,(r()-.5)*.5,(r()-.5)*.8)),q,sv.setScalar(L.s*(3.3+r()*1.3)));
+      m4.multiplyMatrices(tm,lm);leafMesh.setMatrixAt(li,m4);
+      leafRand[li*3]=(tr[0]*.6+r()*.4);leafRand[li*3+1]=r();leafRand[li*3+2]=r()<.8?tr[2]:r();li++;
+    }
+  }
+  leafMesh.castShadow=true;leafMesh.frustumCulled=false;scene.add(leafMesh);
+
+  // 下草：チシマザサとシダ
+  const floorMat=(tex)=>{const m=new THREE.MeshLambertMaterial({map:tex,alphaTest:.45,side:THREE.DoubleSide,alphaToCoverage:true});patchFoliage(m,.07,glowFloor,true);return m;};
+  const col=new THREE.Color();
+  const scatter=(geo,mat,count,accept,sMin,sMax,hue)=>{
+    const im=new THREE.InstancedMesh(geo,mat,count);let n=0,tries=0;
+    while(n<count&&tries<count*12){tries++;
+      const x=(r()-.5)*360,z=(r()-.5)*360;if(!accept(x,z))continue;
+      e.set(0,r()*Math.PI*2,0);q.setFromEuler(e);const s=sMin+r()*(sMax-sMin);
+      m4.compose(pv.set(x,height(x,z)-.05,z),q,sv.set(s,s*(.8+r()*.4),s));im.setMatrixAt(n,m4);
+      hue(col,r());im.setColorAt(n,col);n++;}
+    im.count=n;im.receiveShadow=true;im.frustumCulled=false;scene.add(im);return im;
+  };
+  sasaMesh=scatter(crossQuads(3,1.7,1.25,true,.25,3),floorMat(sasaTex),15000,(x,z)=>{
+    const d=Math.abs(x-streamX(z)),dt=Math.abs(x-trailX(z));if(dt<1.5||d<3.4)return false;
+    return r()<smooth(-.25,.35,fbm(x*.028,z*.028+40,3))*(dt<3?.5:1);},.75,1.45,(c,t)=>c.setHSL(.25+t*.04,.42,.36+t*.1));
+  fernMesh=scatter(crossQuads(3,1.7,1.1,true,.6,5),floorMat(fernTex),4200,(x,z)=>{
+    const d=Math.abs(x-streamX(z)),dt=Math.abs(x-trailX(z));if(dt<1.3||d<3)return false;
+    return r()<(d<22?.85:.25);},.6,1.25,(c,t)=>c.setHSL(.24+t*.05,.5,.38+t*.12));
+
+  // 苔むした岩
+  {
+    const rg=new THREE.IcosahedronGeometry(1,3),p=rg.attributes.position;
+    for(let i=0;i<p.count;i++){_tmp.fromBufferAttribute(p,i);const k=1+.28*fbm(_tmp.x*1.3+_tmp.y*.7+4,_tmp.z*1.3-_tmp.y*.9,3);p.setXYZ(i,_tmp.x*k,_tmp.y*k*.62,_tmp.z*k);}
+    rg.computeVertexNormals();const nn=rg.attributes.normal,cc=new Float32Array(p.count*3);
+    for(let i=0;i<p.count;i++){const m=smooth(.15,.7,nn.getY(i));cc.set([lerp(.56,.45,m),lerp(.57,.64,m),lerp(.53,.3,m)],i*3);}
+    rg.setAttribute('color',new THREE.BufferAttribute(cc,3));
+    const rm=new THREE.InstancedMesh(rg,new THREE.MeshLambertMaterial({vertexColors:true,map:barkTex}),360);let n=0;
+    for(let i=0;i<360;i++){let x,z,s;
+      if(i<230){z=(r()-.5)*390;x=streamX(z)+(r()-.5)*8;s=.35+r()*1.1;}
+      else{x=(r()-.5)*360;z=(r()-.5)*360;if(Math.abs(x-trailX(z))<2)continue;s=.3+r()*.9;}
+      e.set(r()*.4,r()*6.3,r()*.4);q.setFromEuler(e);m4.compose(pv.set(x,height(x,z)-s*.25,z),q,sv.set(s*(1+r()*.5),s,s*(1+r()*.3)));rm.setMatrixAt(n++,m4);}
+    rm.count=n;rm.receiveShadow=true;rm.castShadow=true;rm.frustumCulled=false;scene.add(rm);
+  }
+  // 倒木と切り株
+  {
+    const lg=new THREE.CylinderGeometry(.36,.44,7.5,10,4);lg.rotateZ(Math.PI/2);
+    const p=lg.attributes.position,cc=new Float32Array(p.count*3);
+    for(let i=0;i<p.count;i++){const m=smooth(-.1,.3,p.getY(i));cc.set([lerp(.7,.46,m),lerp(.66,.64,m),lerp(.58,.3,m)],i*3);}
+    lg.setAttribute('color',new THREE.BufferAttribute(cc,3));
+    const lmx=new THREE.InstancedMesh(lg,new THREE.MeshLambertMaterial({map:barkTex,vertexColors:true}),46);let n=0;
+    for(let i=0;i<46;i++){const x=(r()-.5)*340,z=(r()-.5)*340,yaw=r()*Math.PI;
+      const ex=Math.cos(yaw)*3.7,ez=-Math.sin(yaw)*3.7;
+      if(Math.abs(x-trailX(z))<5||Math.abs(x-streamX(z))<5||nearRoute(x,z,5))continue;
+      const y=(height(x+ex,z+ez)+height(x-ex,z-ez))/2+.2,tilt=Math.atan2(height(x+ex,z+ez)-height(x-ex,z-ez),7.4);
+      e.set(0,yaw,tilt,'YXZ');q.setFromEuler(e);m4.compose(pv.set(x,y,z),q,sv.setScalar(.8+r()*.5));lmx.setMatrixAt(n++,m4);}
+    lmx.count=n;lmx.castShadow=true;lmx.receiveShadow=true;lmx.frustumCulled=false;scene.add(lmx);
+  }
+
+  // 木漏れ日の光芒
+  {
+    const g=new THREE.CylinderGeometry(1.7,2.0,36,18,1,true);
+    const mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+      uniforms:{uTime:U.uTime,uI:{value:.07},uCol:{value:new THREE.Color(0xfff0c8)},uFog:{value:.013}},
+      vertexShader:`varying vec2 vUv; varying vec3 vN; varying vec3 vV; varying float vD;
+        void main(){vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); vD=-mv.z; gl_Position=projectionMatrix*mv;}`,
+      fragmentShader:`uniform float uTime; uniform float uI; uniform vec3 uCol; uniform float uFog; varying vec2 vUv; varying vec3 vN; varying vec3 vV; varying float vD;
+        void main(){ float edge=pow(abs(dot(normalize(vN),normalize(vV))),2.2);
+          float along=smoothstep(0.0,.3,vUv.y)*smoothstep(1.0,.55,vUv.y);
+          float fl=.8+.2*sin(uTime*.6+vUv.x*12.566);
+          float fog=exp(-uFog*uFog*vD*vD*.45); float nearF=smoothstep(1.5,7.0,vD);
+          gl_FragColor=vec4(uCol*uI*edge*along*fl*fog*nearF,1.0);}`});
+    const qq=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),sunDir);
+    for(let i=0;i<70;i++){
+      let x=(r()-.5)*330,z=(r()-.5)*330;if(i<14){z=-120+i*18+(r()-.5)*10;x=trailX(z)+(r()-.5)*14;}
+      const m=new THREE.Mesh(g,mat);m.quaternion.copy(qq);m.position.set(x,height(x,z),z).addScaledVector(sunDir,17);
+      m.scale.setScalar(.6+r()*.8);m.renderOrder=3;m.frustumCulled=true;scene.add(m);shafts.push(m);
+    }
+    U.shaft=mat.uniforms;
+  }
+  // 舞う塵・花粉
+  {
+    const n=1400,pos=new Float32Array(n*3);for(let i=0;i<n;i++){pos[i*3]=(r()-.5)*44;pos[i*3+1]=r()*12;pos[i*3+2]=(r()-.5)*44;}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    dust=new THREE.Points(g,new THREE.PointsMaterial({size:.07,map:dotTex,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:0xfff1c8,opacity:.75,fog:false}));
+    dust.frustumCulled=false;dust.userData.base=pos.slice();scene.add(dust);
+  }
+  // 案内板
+  try{await Promise.race([document.fonts.load('800 60px "Shippori Mincho B1"'),new Promise(res=>setTimeout(res,1500))]);}catch(_){}
+  const sign=(x,z,yaw,lines)=>{
+    const tex=canvasTex(512,256,(g,w,h)=>{g.fillStyle='#6b4b2e';g.fillRect(0,0,w,h);g.fillStyle='#5a3d24';for(let i=0;i<14;i++)g.fillRect(0,i*19+6,w,2);
+      g.strokeStyle='#e9dcc0';g.lineWidth=6;g.strokeRect(14,14,w-28,h-28);g.fillStyle='#f3e8cf';g.textAlign='center';g.textBaseline='middle';
+      g.font='800 64px "Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif';g.fillText(lines[0],w/2,h*.42);
+      g.font='600 28px "Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif';g.fillText(lines[1],w/2,h*.74);});
+    const wood=new THREE.MeshLambertMaterial({color:0x6b4b2e}),face=new THREE.MeshLambertMaterial({map:tex});
+    const grp=new THREE.Group(),y=height(x,z);
+    // 柱は板の裏側に立てる（板の表＝ローカル+z面、厚み0.07の半分＋柱の半幅＋すき間ぶん後ろへ）
+    const post=new THREE.Mesh(new THREE.BoxGeometry(.12,1.7,.12),wood);post.position.set(0,.85,-.1);
+    const board=new THREE.Mesh(new THREE.BoxGeometry(1.3,.65,.07),[wood,wood,wood,wood,face,wood]);board.position.y=1.45;
+    grp.add(post,board);grp.position.set(x,y-.05,z);grp.rotation.y=yaw;grp.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});scene.add(grp);
+  };
+  sign(startSign.x,startSign.z,Math.PI,['ブナ林遊歩道','沢沿いに下る']);
+  sign(trailX(27)+1.9,27,Math.PI,['ブナの巨木','この先 左手']);
+
+  applySeason(0);
+  readyFlag=true;
+}
+
+/* ================= 季節の適用 ================= */
+let season=0;const tmpC=new THREE.Color();
+function applySeason(i){
+  season=i;const S=SEASONS[i];
+  scene.fog.color.setHex(S.fog);scene.fog.density=S.dens;scene.background.setHex(S.fog);
+  sun.color.setHex(S.sun);sun.intensity=S.sunI;hemi.color.setHex(S.sky);hemi.groundColor.setHex(S.gnd);glowLeaf.value=S.glow;
+  if(U.shaft){U.shaft.uFog.value=S.dens;U.shaft.uCol.value.setHex(i===2?0xffe2b0:0xfff0c8);}
+  if(leafMesh){const t=[0,0,0];for(let k=0;k<leafMesh.count;k++){t[0]=leafRand[k*3];t[1]=leafRand[k*3+1];t[2]=leafRand[k*3+2];S.leaf(t,tmpC);leafMesh.setColorAt(k,tmpC);}
+    leafMesh.instanceColor.needsUpdate=true;}
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.season===i)));
+}
+
+/* ================= 音 ================= */
+const Sound={
+  ctx:null,on:true,
+  start(){
+    if(this.ctx){this.ctx.resume&&this.ctx.resume();return;}
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    const ctx=this.ctx=new AC(),sr=ctx.sampleRate,len=sr*4;
+    this.master=ctx.createGain();this.master.gain.value=.9;this.master.connect(ctx.destination);
+    const wb=ctx.createBuffer(1,len,sr),wd=wb.getChannelData(0);for(let i=0;i<len;i++)wd[i]=Math.random()*2-1;
+    const bb=ctx.createBuffer(1,len,sr),bd=bb.getChannelData(0);let last=0;for(let i=0;i<len;i++){last=(last+.02*(Math.random()*2-1))/1.02;bd[i]=last*3.5;}
+    this.white=wb;
+    const loop=b=>{const s=ctx.createBufferSource();s.buffer=b;s.loop=true;s.start();return s;};
+    const bq=(type,f,Q)=>{const b=ctx.createBiquadFilter();b.type=type;b.frequency.value=f;if(Q)b.Q.value=Q;return b;};
+    // 森の残響
+    const ir=ctx.createBuffer(2,sr*2.6,sr);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3.2);}
+    this.verb=ctx.createConvolver();this.verb.buffer=ir;const vg=ctx.createGain();vg.gain.value=.35;this.verb.connect(vg).connect(this.master);
+    this.windG=ctx.createGain();this.windG.gain.value=.2;loop(bb).connect(bq('lowpass',480)).connect(this.windG).connect(this.master);
+    this.rustleG=ctx.createGain();this.rustleG.gain.value=.015;loop(wb).connect(bq('bandpass',4200,.6)).connect(this.rustleG).connect(this.master);
+    this.streamG=ctx.createGain();this.streamG.gain.value=0;this.streamG.connect(this.master);
+    const s1=loop(wb);s1.connect(bq('bandpass',850,.7)).connect(this.streamG);
+    this.babble=ctx.createGain();this.babble.gain.value=.5;s1.connect(bq('highpass',2200)).connect(bq('lowpass',6500)).connect(this.babble).connect(this.streamG);
+    this.birdLoop();this.peckerLoop();
+  },
+  out(pan){const p=this.ctx.createStereoPanner?this.ctx.createStereoPanner():null;const g=this.ctx.createGain();
+    if(p){p.pan.value=pan;g.connect(p);p.connect(this.master);p.connect(this.verb);}else{g.connect(this.master);g.connect(this.verb);}return g;},
+  tone(t0,dur,f0,f1,vol,dst){const c=this.ctx,o=c.createOscillator(),g=c.createGain();o.type='sine';
+    o.frequency.setValueAtTime(f0,t0);o.frequency.exponentialRampToValueAtTime(f1,t0+dur);
+    g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(vol,t0+Math.min(.02,dur*.3));g.gain.setValueAtTime(vol,t0+dur*.7);g.gain.linearRampToValueAtTime(0,t0+dur);
+    o.connect(g).connect(dst);o.start(t0);o.stop(t0+dur+.05);},
+  birdLoop(){
+    const c=this.ctx;const next=()=>{if(!this.ctx)return;setTimeout(()=>{this.bird();next();},2500+Math.random()*6500);};next();
+  },
+  bird(){
+    if(!this.on||!this.ctx||this.ctx.state!=='running')return;
+    const t=this.ctx.currentTime+.05,dst=this.out(Math.random()*1.6-.8),v=.03+Math.random()*.04,k=Math.random();
+    if(season===0&&k<.25){ // 谷渡りのようなホーホケキョ
+      this.tone(t,1.05,980,1120,v*1.3,dst);this.tone(t+1.2,.1,1750,1500,v,dst);this.tone(t+1.33,.12,2500,1800,v,dst);this.tone(t+1.48,.34,1850,2150,v*1.1,dst);
+    }else if(k<.6){ // ツツピー
+      const n=2+(Math.random()*3|0);for(let i=0;i<n;i++){const b=t+i*.42;this.tone(b,.06,4300,3900,v,dst);this.tone(b+.1,.06,4300,3900,v,dst);this.tone(b+.2,.17,3100,3000,v,dst);}
+    }else{ // さえずり
+      let b=t;const n=6+(Math.random()*8|0);for(let i=0;i<n;i++){const f=2500+Math.random()*2800,d=.04+Math.random()*.06;this.tone(b,d,f,f*(.8+Math.random()*.5),v*.8,dst);b+=d+.02+Math.random()*.04;}
+    }
+  },
+  peckerLoop(){const next=()=>{if(!this.ctx)return;setTimeout(()=>{this.pecker();next();},22000+Math.random()*30000);};next();},
+  pecker(){ // 遠くの木をつつくドラミング
+    if(!this.on||!this.ctx||this.ctx.state!=='running')return;
+    const c=this.ctx,t0=c.currentTime+.05,dst=this.out(Math.random()*1.4-.7);
+    for(let i=0;i<18;i++){const t=t0+i*.058,s=c.createBufferSource();s.buffer=this.white;const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=650;f.Q.value=4;
+      const g=c.createGain(),v=.16*(1-i/22);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+.04);
+      s.connect(f).connect(g).connect(dst);s.start(t,Math.random()*3,.05);}
+  },
+  step(inWater,loud){
+    if(!this.on||!this.ctx||this.ctx.state!=='running')return;
+    const c=this.ctx,t=c.currentTime,s=c.createBufferSource();s.buffer=this.white;
+    const f=c.createBiquadFilter(),g=c.createGain();
+    if(inWater){f.type='bandpass';f.frequency.value=520+Math.random()*200;f.Q.value=1.2;g.gain.setValueAtTime(.0,t);g.gain.linearRampToValueAtTime(.5*loud,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+.32);}
+    else{f.type='bandpass';f.frequency.value=1500+Math.random()*900;f.Q.value=.9;g.gain.setValueAtTime(.26*loud,t);g.gain.exponentialRampToValueAtTime(.08*loud,t+.04);g.gain.exponentialRampToValueAtTime(.001,t+.16);}
+    s.connect(f).connect(g).connect(this.master);s.start(t,Math.random()*3,.35);
+  },
+  update(time,streamDist){
+    if(!this.ctx)return;const c=this.ctx.currentTime;
+    const gust=.5+.5*Math.sin(time*.13)*Math.sin(time*.31+1.7);
+    this.windG.gain.setTargetAtTime(.1+.22*gust,c,.5);this.rustleG.gain.setTargetAtTime(.006+.03*gust*gust,c,.4);
+    this.streamG.gain.setTargetAtTime(.55*Math.exp(-streamDist/13)+.012,c,.3);
+    this.babble.gain.setTargetAtTime(.35+Math.random()*.6,c,.05);
+  },
+  toggle(){this.on=!this.on;if(this.master)this.master.gain.setTargetAtTime(this.on?.9:0,this.ctx.currentTime,.1);return this.on;}
+};
+
+/* ================= 歩行と操作 ================= */
+const player={x:trailX(-136),z:-136,yaw:Math.PI,pitch:-.02,vx:0,vz:0,phase:0,eye:0,lastStep:0};
+const keys=new Set();let started=false,locked=false,dragging=false,joyVec={x:0,y:0},joyId=null,lookId=null,lookLast=null;
+addEventListener('keydown',e=>{if(!started)return;keys.add(e.code);
+  if(e.code==='KeyG')setAuto(!auto);
+  if(e.code==='Digit1')applySeason(0);if(e.code==='Digit2')applySeason(1);if(e.code==='Digit3')applySeason(2);
+  if(e.code.startsWith('Arrow'))e.preventDefault();});
+addEventListener('keyup',e=>keys.delete(e.code));
+addEventListener('blur',()=>keys.clear());
+const look=(dx,dy,k)=>{player.yaw-=dx*k;player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch-dy*k));
+  if(auto){auto.uYaw-=dx*k;auto.uPitch=Math.max(-1.2,Math.min(1.2,auto.uPitch-dy*k));auto.lastLook=clock.elapsedTime;}};
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===canvas;});
+document.addEventListener('mousemove',e=>{if(locked)look(e.movementX||0,e.movementY||0,.0022);});
+const joyEl=document.getElementById('joy'),joyKnob=joyEl.querySelector('i');let joyOrigin=null;
+canvas.addEventListener('pointerdown',e=>{
+  if(!started)return;
+  if(e.pointerType==='mouse'){
+    if(!locked&&canvas.requestPointerLock){try{const p=canvas.requestPointerLock();if(p&&p.catch)p.catch(()=>{});}catch(_){}}
+    dragging=true;lookLast={x:e.clientX,y:e.clientY};return;
+  }
+  canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);
+  if(e.clientX<innerWidth*.45&&joyId===null){joyId=e.pointerId;joyOrigin={x:e.clientX,y:e.clientY};joyEl.style.display='block';joyEl.style.left=e.clientX+'px';joyEl.style.top=e.clientY+'px';joyKnob.style.transform='';}
+  else if(lookId===null){lookId=e.pointerId;lookLast={x:e.clientX,y:e.clientY};}
+});
+canvas.addEventListener('pointermove',e=>{
+  if(e.pointerType==='mouse'){if(dragging&&!locked&&lookLast){look(e.clientX-lookLast.x,e.clientY-lookLast.y,.004);lookLast={x:e.clientX,y:e.clientY};}return;}
+  if(e.pointerId===joyId){let dx=e.clientX-joyOrigin.x,dy=e.clientY-joyOrigin.y;const L=Math.hypot(dx,dy),M=42;if(L>M){dx*=M/L;dy*=M/L;}
+    joyVec={x:dx/M,y:-dy/M};joyKnob.style.transform=`translate(${dx}px,${dy}px)`;}
+  else if(e.pointerId===lookId){look(e.clientX-lookLast.x,e.clientY-lookLast.y,.0055);lookLast={x:e.clientX,y:e.clientY};}
+});
+const endPtr=e=>{if(e.pointerType==='mouse'){dragging=false;return;}
+  if(e.pointerId===joyId){joyId=null;joyVec={x:0,y:0};joyEl.style.display='none';}if(e.pointerId===lookId)lookId=null;};
+canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
+
+function collide(nx,nz){
+  nx=Math.max(-WALK,Math.min(WALK,nx));nz=Math.max(-WALK,Math.min(WALK,nz));
+  for(let gx=-1;gx<=1;gx++)for(let gz=-1;gz<=1;gz++){
+    const list=grid.get(cellKey(nx+gx*8,nz+gz*8));if(!list)continue;
+    for(const t of list){const dx=nx-t.x,dz=nz-t.z,d=Math.hypot(dx,dz);if(d<t.rad&&d>1e-4){nx=t.x+dx/d*t.rad;nz=t.z+dz/d*t.rad;}}
+  }
+  return [nx,nz];
+}
+const DIRS=['北','北東','東','南東','南','南西','西','北西'];
+const readout=document.getElementById('readout');let readT=0;
+
+function updatePlayer(dt,time){
+  let f=0,s=0,turn=0;
+  if(keys.has('KeyW')||keys.has('ArrowUp'))f+=1;if(keys.has('KeyS')||keys.has('ArrowDown'))f-=1;
+  if(keys.has('KeyD'))s+=1;if(keys.has('KeyA'))s-=1;
+  if(keys.has('ArrowLeft'))turn+=1;if(keys.has('ArrowRight'))turn-=1;
+  f+=joyVec.y;s+=joyVec.x;player.yaw+=turn*dt*1.6;
+  if(auto&&(Math.abs(f)>.05||Math.abs(s)>.05||turn))setAuto(false);
+  const inWater=Math.abs(player.x-streamX(player.z))<3.2&&height(player.x,player.z)<waterY(player.z)-.05;
+  let speed=(keys.has('ShiftLeft')||keys.has('ShiftRight'))?4.6:2.3;if(inWater)speed*=.55;
+  const fx=-Math.sin(player.yaw),fz=-Math.cos(player.yaw),rx=Math.cos(player.yaw),rz=-Math.sin(player.yaw);
+  let tx=fx*f+rx*s,tz=fz*f+rz*s;const tl=Math.hypot(tx,tz);if(tl>1){tx/=tl;tz/=tl;}
+  if(auto){const m=autoStep(dt);tx=m.tx;tz=m.tz;speed=m.speed*(inWater?.55:1);}
+  const k=1-Math.exp(-dt*7);player.vx+=(tx*speed-player.vx)*k;player.vz+=(tz*speed-player.vz)*k;
+  const [nx,nz]=collide(player.x+player.vx*dt,player.z+player.vz*dt);
+  const moved=Math.hypot(nx-player.x,nz-player.z)/Math.max(dt,1e-4);player.x=nx;player.z=nz;
+  const prev=player.phase;player.phase+=dt*(1.6+moved*.75)*(moved>.25?1:0);
+  if(Math.floor(prev/Math.PI)!==Math.floor(player.phase/Math.PI))Sound.step(inWater,Math.min(1,moved/2.3));
+  const bob=Math.sin(player.phase*2)*.035*Math.min(1,moved/2.3);
+  const gy=height(player.x,player.z);const target=Math.max(gy,inWater?waterY(player.z)-.45:gy)+1.62;
+  player.eye=player.eye?lerp(player.eye,target,1-Math.exp(-dt*10)):target;
+  camera.position.set(player.x,player.eye+bob,player.z);
+  if(auto)autoLook(dt,time);
+  camera.rotation.set(player.pitch,player.yaw,Math.sin(player.phase)*.004*Math.min(1,moved/2.3));
+  readT-=dt;if(readT<=0){readT=.25;const a=Math.atan2(-fx,fz);const di=DIRS[((Math.round(a/(Math.PI/4))%8)+8)%8];
+    readout.textContent=`${SEASONS[season].name} · ${di} · 標高 ${Math.round(gy*3.2+540)} m`;
+    autoState.textContent=auto?(auto.wait>0&&auto.label?`立ち止まる — ${auto.label}`:`自動歩行中 · ${auto.i<route.length/2?'沢沿いを下る':'入口へ戻る'}`):'';}
+  Sound.update(time,Math.abs(player.x-streamX(player.z)));
+}
+
+/* ================= 自動歩行 ================= */
+let auto=null;
+const autoBtn=document.getElementById('autoBtn'),autoState=document.getElementById('autoState');
+const angDiff=(a,b)=>{let d=(b-a)%(Math.PI*2);if(d>Math.PI)d-=Math.PI*2;if(d<-Math.PI)d+=Math.PI*2;return d;};
+function setAuto(on){
+  if(on&&!auto){
+    // 今いる場所から近く、向いている方向に続くルート上の点から歩き始める
+    const fx=-Math.sin(player.yaw),fz=-Math.cos(player.yaw);let best=0,bs=1e9;
+    route.forEach((p,i)=>{const q=route[(i+1)%route.length],dl=Math.hypot(q.x-p.x,q.z-p.z)||1;
+      const sc=Math.hypot(p.x-player.x,p.z-player.z)-4*((q.x-p.x)*fx+(q.z-p.z)*fz)/dl;if(sc<bs){bs=sc;best=i;}});
+    auto={i:best,wait:0,heading:player.yaw,look:null,label:'',uYaw:0,uPitch:0,lastLook:-99,stuckT:0,sx:player.x,sz:player.z};
+  }else if(!on)auto=null;
+  autoBtn.setAttribute('aria-pressed',String(!!auto));autoBtn.textContent=auto?'自動歩行を止める':'自動で歩く';
+  autoState.textContent=auto?'自動歩行中':'';
+}
+function autoStep(dt){
+  const a=auto,Z={tx:0,tz:0,speed:0};
+  if(a.wait>0){a.wait-=dt;if(a.wait<=0){a.i=(a.i+1)%route.length;a.look=null;a.label='';a.stuckT=0;a.sx=player.x;a.sz=player.z;}return Z;}
+  let wp,dx,dz,d;
+  for(let g=0;g<4;g++){wp=route[a.i];dx=wp.x-player.x;dz=wp.z-player.z;d=Math.hypot(dx,dz);
+    if(d<(wp.pause?.9:2.2)){if(wp.pause){a.wait=wp.pause;a.look=wp.look;a.label=wp.label;return Z;}a.i=(a.i+1)%route.length;}else break;}
+  a.stuckT+=dt;if(a.stuckT>2.5){if(Math.hypot(player.x-a.sx,player.z-a.sz)<.7)a.i=(a.i+1)%route.length;a.stuckT=0;a.sx=player.x;a.sz=player.z;}
+  a.heading+=angDiff(a.heading,Math.atan2(-dx,-dz))*(1-Math.exp(-dt*2.2));
+  return {tx:-Math.sin(a.heading),tz:-Math.cos(a.heading),speed:wp.pause?Math.min(1.35,.35+d*.4):1.35};
+}
+function autoLook(dt,time){
+  // 歩きながらゆっくり左右を見回し、ときどき林冠を見上げる。立ち止まる場所では見どころに目を向ける
+  const a=auto;let ty,tp;
+  if(a.wait>0&&a.look){const L=a.look,dx=L.x-player.x,dz=L.z-player.z;ty=Math.atan2(-dx,-dz);tp=Math.atan2(L.y-player.eye,Math.hypot(dx,dz));}
+  else{ty=a.heading+.42*Math.sin(time*.11)+.18*Math.sin(time*.27+1.3);tp=-.04+.55*Math.pow(Math.max(0,Math.sin(time*.07+2.1)),6)+.05*Math.sin(time*.23);}
+  if(time-a.lastLook>3){const k=Math.exp(-dt*.6);a.uYaw*=k;a.uPitch*=k;}
+  const s=1-Math.exp(-dt*1.6);
+  player.yaw+=angDiff(player.yaw,ty+a.uYaw)*s;
+  player.pitch+=(Math.max(-1.3,Math.min(1.3,tp+a.uPitch))-player.pitch)*s;
+}
+
+/* ================= ループ ================= */
+const clock=new THREE.Clock();let idleT=0;
+function frame(){
+  const dt=Math.min(clock.getDelta(),.05),time=clock.elapsedTime;
+  U.uTime.value=time;if(U.water)U.water.value=time;
+  if(started)updatePlayer(dt,time);
+  else{idleT+=dt;const gy=height(player.x,player.z);camera.position.set(player.x,gy+1.62,player.z);camera.rotation.set(.05+Math.sin(idleT*.1)*.04,Math.PI+Math.sin(idleT*.07)*.35,0);}
+  // 影のカメラを歩く人に追従させる（テクセルにスナップしてちらつきを抑える）
+  const cx=Math.round(camera.position.x/2)*2,cz=Math.round(camera.position.z/2)*2,cy=height(cx,cz);
+  sun.target.position.set(cx,cy,cz);sun.position.set(cx,cy,cz).addScaledVector(sunDir,120);
+  if(dust){const p=dust.geometry.attributes.position,b=dust.userData.base;
+    for(let i=0;i<p.count;i++){const bx=b[i*3]+Math.sin(time*.2+i)*.6,bz=b[i*3+2]+Math.cos(time*.17+i*1.3)*.6;
+      let x=((bx-camera.position.x)%44+66)%44-22,z=((bz-camera.position.z)%44+66)%44-22;
+      p.setXYZ(i,camera.position.x+x,camera.position.y-3+((b[i*3+1]+time*.08+Math.sin(time*.3+i)*.2)%12+12)%12,camera.position.z+z);}
+    p.needsUpdate=true;}
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+/* ================= UI ================= */
+const enter=document.getElementById('enter');
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{applySeason(+b.dataset.season);canvas.focus();}));
+const soundBtn=document.getElementById('sound');
+soundBtn.addEventListener('click',()=>{const on=Sound.toggle();soundBtn.textContent=on?'音 オン':'音 オフ';soundBtn.setAttribute('aria-pressed',String(on));canvas.focus();});
+const enterAuto=document.getElementById('enterAuto');
+function begin(withAuto){
+  started=true;player.eye=0;Sound.start();document.getElementById('intro').classList.add('gone');document.body.classList.add('walking');
+  canvas.focus();
+  if(withAuto){setAuto(true);return;}
+  if(matchMedia('(hover:hover)').matches&&canvas.requestPointerLock){try{const p=canvas.requestPointerLock();if(p&&p.catch)p.catch(()=>{});}catch(_){}}
+}
+enter.addEventListener('click',()=>begin(false));
+enterAuto.addEventListener('click',()=>begin(true));
+autoBtn.addEventListener('click',()=>{setAuto(!auto);canvas.focus();});
+requestAnimationFrame(()=>setTimeout(async()=>{
+  try{await buildWorld();}catch(err){console.error(err);enter.textContent='読み込みに失敗しました';return;}
+  enter.disabled=false;enter.textContent='森に入る';enterAuto.disabled=false;
+  requestAnimationFrame(frame);
+},30));
+renderer.render(scene,camera);
+</script>
+</body>
+</html>
